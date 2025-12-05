@@ -664,3 +664,113 @@ class V3Oauth2mTlsClientCredentialTests(utils.TestCase):
             oauth2_endpoint=oauth2_endpoint,
             oauth2_client_secret=uuid.uuid4().hex,
         )
+
+
+class V3WebSSOTests(utils.TestCase):
+    """Test cases for v3websso plugin loader."""
+
+    def setUp(self):
+        super().setUp()
+        self.auth_url = uuid.uuid4().hex
+
+    def create(self, **kwargs):
+        kwargs.setdefault('auth_url', self.auth_url)
+        loader = loading.get_plugin_loader('v3websso')
+        return loader.load_from_options(**kwargs)
+
+    def test_basic(self):
+        """Test basic plugin loading with required parameters."""
+        identity_provider = uuid.uuid4().hex
+        protocol = 'openid'
+
+        plugin = self.create(
+            identity_provider=identity_provider,
+            protocol=protocol,
+        )
+
+        self.assertEqual(self.auth_url, plugin.auth_url)
+        self.assertEqual(identity_provider, plugin.identity_provider)
+        self.assertEqual(protocol, plugin.protocol)
+
+    def test_with_project_scope(self):
+        """Test plugin loading with project scope."""
+        identity_provider = uuid.uuid4().hex
+        protocol = 'openid'
+        project_name = uuid.uuid4().hex
+        project_domain_id = uuid.uuid4().hex
+
+        plugin = self.create(
+            identity_provider=identity_provider,
+            protocol=protocol,
+            project_name=project_name,
+            project_domain_id=project_domain_id,
+        )
+
+        self.assertEqual(project_name, plugin.project_name)
+        self.assertEqual(project_domain_id, plugin.project_domain_id)
+
+    def test_with_custom_redirect_port(self):
+        """Test plugin loading with custom redirect port."""
+        identity_provider = uuid.uuid4().hex
+        protocol = 'openid'
+        custom_port = 8080
+
+        plugin = self.create(
+            identity_provider=identity_provider,
+            protocol=protocol,
+            redirect_port=custom_port,
+        )
+
+        self.assertEqual(custom_port, plugin.redirect_port)
+
+    def test_with_custom_redirect_host(self):
+        """Test plugin loading with custom redirect host."""
+        identity_provider = uuid.uuid4().hex
+        protocol = 'openid'
+        custom_host = '127.0.0.1'
+
+        plugin = self.create(
+            identity_provider=identity_provider,
+            protocol=protocol,
+            redirect_host=custom_host,
+        )
+
+        self.assertEqual(custom_host, plugin.redirect_host)
+
+    def test_with_cache_path(self):
+        """Test plugin loading with custom cache path."""
+        identity_provider = uuid.uuid4().hex
+        protocol = 'openid'
+        cache_path = '/tmp/custom_cache'
+
+        plugin = self.create(
+            identity_provider=identity_provider,
+            protocol=protocol,
+            cache_path=cache_path,
+        )
+
+        self.assertEqual(cache_path, str(plugin.cache_path))
+
+    def test_default_redirect_port(self):
+        """Test that default redirect port is 9990."""
+        identity_provider = uuid.uuid4().hex
+        protocol = 'openid'
+
+        plugin = self.create(
+            identity_provider=identity_provider,
+            protocol=protocol,
+        )
+
+        self.assertEqual(9990, plugin.redirect_port)
+
+    def test_default_redirect_host(self):
+        """Test that default redirect host is localhost."""
+        identity_provider = uuid.uuid4().hex
+        protocol = 'openid'
+
+        plugin = self.create(
+            identity_provider=identity_provider,
+            protocol=protocol,
+        )
+
+        self.assertEqual('localhost', plugin.redirect_host)
