@@ -590,3 +590,48 @@ class OAuth2mTlsClientCredential(
             )
             raise exceptions.OptionError(m)
         return super().load_from_options(**kwargs)
+
+
+class WebSSOOpenIDConnect(
+    loading.BaseFederationLoader[identity.V3WebSSOOpenIDConnect]
+):
+    """Authenticate with OpenID Connect Web SSO.
+
+    This plugin opens a web browser for the user to authenticate with their
+    OpenID Connect Identity Provider, then captures the resulting token via
+    a local callback server.
+    """
+
+    @property
+    def plugin_class(self) -> type[identity.V3WebSSOOpenIDConnect]:
+        return identity.V3WebSSOOpenIDConnect
+
+    def get_options(self) -> list[opts.Opt]:
+        options = super().get_options()
+
+        options.extend(
+            [
+                loading.Opt(
+                    'redirect-host',
+                    default='localhost',
+                    help='Hostname where the callback server will listen. '
+                    'Default is localhost.',
+                ),
+                loading.Opt(
+                    'redirect-port',
+                    default=9990,
+                    type=int,
+                    help='Port where the callback server will listen. '
+                    'Default is 9990. The redirect URL configured in the '
+                    'authentication server should be '
+                    'http://<redirect-host>:<redirect-port>/auth/websso/',
+                ),
+                loading.Opt(
+                    'cache-path',
+                    help='Directory path where token cache will be stored. '
+                    'If not provided, uses platform-specific cache directory.',
+                ),
+            ]
+        )
+
+        return options
