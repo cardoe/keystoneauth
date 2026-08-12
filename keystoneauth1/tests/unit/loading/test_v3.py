@@ -13,6 +13,8 @@
 import random
 import uuid
 
+import fixtures
+
 from keystoneauth1 import exceptions
 from keystoneauth1 import loading
 from keystoneauth1.tests.unit.loading import utils
@@ -663,4 +665,93 @@ class V3Oauth2mTlsClientCredentialTests(utils.TestCase):
             self.create,
             oauth2_endpoint=oauth2_endpoint,
             oauth2_client_secret=uuid.uuid4().hex,
+        )
+
+
+class V3WebSSOTests(utils.TestCase):
+    def setUp(self):
+        super().setUp()
+
+        self.auth_url = uuid.uuid4().hex
+
+    def create(self, **kwargs):
+        kwargs.setdefault('auth_url', self.auth_url)
+        kwargs.setdefault('identity_provider', uuid.uuid4().hex)
+        kwargs.setdefault('protocol', uuid.uuid4().hex)
+        loader = loading.get_plugin_loader('v3websso')
+        return loader.load_from_options(**kwargs)
+
+    def test_options(self):
+        options = loading.get_plugin_loader('v3websso').get_options()
+        self.assertTrue(
+            {
+                'auth-url',
+                'identity-provider',
+                'protocol',
+                'redirect-host',
+                'redirect-port',
+                'token-cache',
+                'cache-path',
+            }.issubset({o.name for o in options})
+        )
+
+    def test_defaults(self):
+        plugin = self.create()
+
+        self.assertEqual('localhost', plugin.redirect_host)
+        self.assertEqual(9990, plugin.redirect_port)
+        self.assertEqual('reuse', plugin.token_cache)
+        self.assertEqual(
+            'http://localhost:9990/auth/websso/', plugin.redirect_uri
+        )
+
+    def test_basic(self):
+        identity_provider = uuid.uuid4().hex
+        protocol = uuid.uuid4().hex
+        cache_path = self.useFixture(fixtures.TempDir()).path
+
+        plugin = self.create(
+            identity_provider=identity_provider,
+            protocol=protocol,
+            redirect_host='127.0.0.1',
+            redirect_port=9991,
+            token_cache='disabled',
+            cache_path=cache_path,
+        )
+
+        self.assertEqual(self.auth_url, plugin.auth_url)
+        self.assertEqual(identity_provider, plugin.identity_provider)
+        self.assertEqual(protocol, plugin.protocol)
+        self.assertEqual('127.0.0.1', plugin.redirect_host)
+        self.assertEqual(9991, plugin.redirect_port)
+        self.assertEqual('disabled', plugin.token_cache)
+        self.assertEqual(cache_path, str(plugin.cache_path))
+
+    def test_identity_provider_is_required(self):
+        loader = loading.get_plugin_loader('v3websso')
+        self.assertRaises(
+            exceptions.MissingRequiredOptions,
+            loader.load_from_options,
+            auth_url=self.auth_url,
+            protocol=uuid.uuid4().hex,
+        )
+
+    def test_scoped(self):
+        project_name = uuid.uuid4().hex
+        project_domain_name = uuid.uuid4().hex
+
+        plugin = self.create(
+            project_name=project_name, project_domain_name=project_domain_name
+        )
+
+        self.assertEqual(project_name, plugin.project_name)
+        self.assertEqual(project_domain_name, plugin.project_domain_name)
+
+    def test_token_cache_modes(self):
+        for mode in ('reuse', 'refresh', 'disabled'):
+            self.assertEqual(mode, self.create(token_cache=mode).token_cache)
+
+    def test_unknown_token_cache_mode(self):
+        self.assertRaises(
+            exceptions.OptionError, self.create, token_cache='maybe'
         )

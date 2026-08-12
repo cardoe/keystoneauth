@@ -1,0 +1,34 @@
+---
+features:
+  - |
+    Added a ``v3websso`` authentication plugin,
+    ``keystoneauth1.identity.v3.WebSSO``, which authenticates using the
+    identity service's browser based Web Single Sign On flow. The plugin opens
+    the WebSSO endpoint in the user's browser and receives the resulting
+    unscoped token on a loopback listener.
+
+    The unscoped token is cached on disk so that rescoping to a different
+    project does not require authenticating in a browser again. The
+    ``token-cache`` option selects what to do with that cache: ``reuse``, the
+    default, reuses a cached token; ``refresh`` discards it, authenticates
+    again and caches the result, which is what to use when the cached token is
+    known to be bad; and ``disabled`` neither reads nor writes it. The
+    ``cache-path`` option relocates it.
+
+    A revoked token is handled without any of these: invalidating the plugin,
+    which a session does when a request comes back unauthorized, discards the
+    cached token as well as the in-memory one.
+
+    The callback URL, by default ``http://localhost:9990/auth/websso/``, must
+    be listed in the identity service's ``[federation] trusted_dashboard``
+    option.
+security:
+  - |
+    The ``v3websso`` plugin's loopback callback is open to login CSRF. While a
+    login is in progress, another page open in the user's browser can submit a
+    form to the callback port and have its own token accepted. The protocol
+    offers no way to prevent this, because the identity service requires the
+    callback's ``origin`` to match a ``trusted_dashboard`` entry exactly and so
+    it cannot carry a nonce. The listener binds to loopback only, runs only for
+    the duration of a login, and stops at the first token it accepts. See the
+    plugin documentation for details.

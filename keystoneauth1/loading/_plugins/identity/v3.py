@@ -15,6 +15,7 @@ import typing as ty
 from keystoneauth1 import exceptions
 from keystoneauth1 import identity
 from keystoneauth1.identity.v3 import oidc
+from keystoneauth1.identity.v3 import websso
 from keystoneauth1 import loading
 from keystoneauth1.loading import opts
 
@@ -590,3 +591,61 @@ class OAuth2mTlsClientCredential(
             )
             raise exceptions.OptionError(m)
         return super().load_from_options(**kwargs)
+
+
+class WebSSO(loading.BaseFederationLoader[identity.V3WebSSO]):
+    """Authenticate with Keystone's browser based WebSSO flow."""
+
+    @property
+    def plugin_class(self) -> type[identity.V3WebSSO]:
+        return identity.V3WebSSO
+
+    def get_options(self) -> list[opts.Opt]:
+        options = super().get_options()
+        options.extend(
+            [
+                loading.Opt(
+                    'redirect-host',
+                    default='localhost',
+                    help=(
+                        'Host the callback server listens on. This must be a '
+                        'loopback address.'
+                    ),
+                ),
+                loading.Opt(
+                    'redirect-port',
+                    type=int,
+                    default=9990,
+                    help=(
+                        'Port the callback server listens on. The resulting '
+                        'callback URL, '
+                        'http://<redirect-host>:<redirect-port>/auth/websso/, '
+                        'must be listed in the identity service\'s '
+                        '[federation] trusted_dashboard option.'
+                    ),
+                ),
+                loading.Opt(
+                    'token-cache',
+                    default=websso.CACHE_REUSE,
+                    metavar='|'.join(websso.CACHE_MODES),
+                    help=(
+                        'How to use the on disk cache of the unscoped token. '
+                        '"reuse", the default, reuses a cached token so that '
+                        'rescoping to another project does not require '
+                        'authenticating in a browser again. "refresh" '
+                        'discards any cached token, authenticates again and '
+                        'caches the result, which is what to use when the '
+                        'cached token is known to be bad. "disabled" neither '
+                        'reads nor writes the cache.'
+                    ),
+                ),
+                loading.Opt(
+                    'cache-path',
+                    help=(
+                        'Directory to store the token cache in. Defaults to a '
+                        'platform specific user cache directory.'
+                    ),
+                ),
+            ]
+        )
+        return options
