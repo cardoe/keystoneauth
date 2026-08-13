@@ -35,7 +35,7 @@ KEYSTONE_TOKEN_VALUE = uuid.uuid4().hex
 def _token_body(expires_in=3600):
     """Return an unscoped token body that expires ``expires_in`` from now."""
     body = copy.deepcopy(oidc_fixtures.UNSCOPED_TOKEN)
-    expires_at = datetime.datetime.now(datetime.UTC) + datetime.timedelta(
+    expires_at = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(
         seconds=expires_in
     )
     body['token']['expires_at'] = expires_at.strftime('%Y-%m-%dT%H:%M:%S.%fZ')

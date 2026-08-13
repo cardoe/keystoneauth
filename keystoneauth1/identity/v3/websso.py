@@ -66,13 +66,17 @@ import typing as ty
 import urllib.parse
 import webbrowser
 import wsgiref.simple_server
-import wsgiref.types
 
 from keystoneauth1 import _utils as utils
 from keystoneauth1 import access
 from keystoneauth1 import exceptions
 from keystoneauth1.identity.v3 import federation
 from keystoneauth1 import session as ks_session
+
+if ty.TYPE_CHECKING:
+    # wsgiref.types is new in Python 3.11 and is only needed to annotate
+    # the callback application, so it is not imported at runtime.
+    import wsgiref.types
 
 _logger = utils.get_logger(__name__)
 
@@ -198,8 +202,8 @@ class _CallbackApp:
 
     def __call__(
         self,
-        environ: wsgiref.types.WSGIEnvironment,
-        start_response: wsgiref.types.StartResponse,
+        environ: 'wsgiref.types.WSGIEnvironment',
+        start_response: 'wsgiref.types.StartResponse',
     ) -> list[bytes]:
         status, page = self._handle(environ)
         body = page.encode('utf-8')
@@ -213,7 +217,7 @@ class _CallbackApp:
         return [body]
 
     def _handle(
-        self, environ: wsgiref.types.WSGIEnvironment
+        self, environ: 'wsgiref.types.WSGIEnvironment'
     ) -> tuple[str, str]:
         if environ.get('PATH_INFO') != _CALLBACK_PATH:
             return '404 Not Found', _FAILURE_HTML
@@ -253,7 +257,7 @@ class _CallbackApp:
         return '200 OK', _SUCCESS_HTML
 
     def _check_request_shape(
-        self, environ: wsgiref.types.WSGIEnvironment
+        self, environ: 'wsgiref.types.WSGIEnvironment'
     ) -> tuple[str, str] | None:
         """Reject requests that do not look like Keystone's callback.
 
